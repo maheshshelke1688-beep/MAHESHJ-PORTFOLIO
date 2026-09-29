@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wireless Security Analyzer | Mahesh Shelke</title>
+<link rel="stylesheet" href="wireless-security-analyzer.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="back-link" href="index.html">← Back to Portfolio</a>
+  <span class="status">ESP32 PROJECT</span>
+</header>
+
+<main>
+<section class="hero">
+  <p class="eyebrow">PROJECT 03</p>
+  <h1>Wireless Security Analyzer</h1>
+  <p class="lead">A portable ESP32-based wireless analysis project with Wi-Fi scanning, BLE discovery, channel analysis, and an OLED-driven menu interface.</p>
+  <div class="tags">
+    <span>ESP32</span><span>Wi-Fi</span><span>BLE</span><span>OLED</span><span>Arduino C++</span><span>In Progress</span>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Project Overview</h2>
+  <p>
+    This project is structured as a portable wireless analyzer running on an ESP32.
+    The firmware uses separate modules for application state, menus, display handling,
+    button input, Wi-Fi scanning, BLE scanning, and Wi-Fi channel analysis.
+  </p>
+  <p>
+    The main interface is a 128×64 SH1106 OLED controlled through I²C, with three
+    physical buttons used for navigation and selection.
+  </p>
+</section>
+
+<section class="card">
+  <h2>Key Features</h2>
+  <div class="feature-grid">
+    <div><strong>Wi-Fi Scanner</strong><span>Lists nearby Wi-Fi networks and shows SSID, RSSI, channel, and security type.</span></div>
+    <div><strong>BLE Scanner</strong><span>Discovers nearby BLE devices and displays name, MAC address, and RSSI.</span></div>
+    <div><strong>Channel Analyzer</strong><span>Counts discovered Wi-Fi networks across channels 1–13 and visualizes the first five channels on the OLED.</span></div>
+    <div><strong>OLED Interface</strong><span>Provides a compact menu and detail screens for portable operation.</span></div>
+    <div><strong>Button Navigation</strong><span>UP, DOWN, and SELECT buttons control the menu and scanner screens.</span></div>
+    <div><strong>Modular Firmware</strong><span>Functionality is separated into focused .cpp/.h modules for easier maintenance.</span></div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>System Architecture</h2>
+  <img class="architecture" src="wireless-security-architecture.svg" alt="Wireless Security Analyzer system architecture">
+</section>
+
+<section class="card">
+  <h2>Hardware & Pin Configuration</h2>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Component</th><th>Connection / Role</th></tr>
+      <tr><td>ESP32</td><td>Main controller and built-in Wi-Fi/BLE radio platform</td></tr>
+      <tr><td>SH1106 OLED</td><td>I²C display; SDA GPIO 21, SCL GPIO 22</td></tr>
+      <tr><td>UP Button</td><td>GPIO 32, INPUT_PULLUP</td></tr>
+      <tr><td>DOWN Button</td><td>GPIO 33, INPUT_PULLUP</td></tr>
+      <tr><td>SELECT Button</td><td>GPIO 25, INPUT_PULLUP</td></tr>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>How It Works</h2>
+  <ol class="steps">
+    <li>The ESP32 initializes I²C, the OLED display, and the three buttons.</li>
+    <li>The firmware enters the main menu and tracks the current screen using an application-state enum.</li>
+    <li>Wi-Fi scanning switches the ESP32 to station mode, performs a network scan, and presents a selectable list.</li>
+    <li>Selecting a Wi-Fi network opens a detail screen with RSSI, channel, and security information.</li>
+    <li>BLE scanning discovers nearby BLE advertisements, stores up to 25 unique devices, and provides a detail view.</li>
+    <li>The channel analyzer counts detected Wi-Fi networks by channel and renders a simple bar visualization.</li>
+  </ol>
+</section>
+
+<section class="card">
+  <h2>Source Code</h2>
+  <p class="muted">Read-only project source. No browser run button is provided because this is ESP32 hardware firmware.</p>
+  <details class="code-file"><summary>WirelessSecurityAnalyzer.ino</summary><pre><code>
+#include &lt;Wire.h&gt;
+#include &lt;WiFi.h&gt;
+
+#include &quot;display.h&quot;
+#include &quot;buttons.h&quot;
+#include &quot;menu.h&quot;
+#include &quot;appState.h&quot;
+#include &quot;wifiScanner.h&quot;
+#include &quot;channelAnalyzer.h&quot;
+#include &quot;bleScanner.h&quot;
+
+void setup()
+{
+    Serial.begin(115200);
+
+    Wire.begin(21,22);
+
+    displayInit();
+
+    buttonsInit();
+
+    bootScreen();
+
+    delay(2000);
+
+    currentScreen = MAIN_MENU;
+
+    drawMenu();
+}
+
+void loop()
+{
+
+    switch(currentScreen)
+{
+    case MAIN_MENU:
+        menuLoop();
+        break;
+
+    case WIFI_SCAN:
+        startWiFiScan();
+        break;
+
+    case WIFI_LIST:
+    case WIFI_DETAILS:
+        wifiScannerLoop();
+        break;
+
+    case CHANNEL_ANALYZER:
+        startChannelAnalyzer();
+        currentScreen = CHANNEL_ANALYZER_VIEW;
+        break;
+
+    case CHANNEL_ANALYZER_VIEW:
+        channelAnalyzerLoop();
+        break;
+
+    case BLE_SCAN:
+        startBLEScan();
+        currentScreen = BLE_LIST;
+        break;
+
+    case BLE_LIST:
+        bleScannerLoop();
+        break;
+    
+
+    default:
+        break;
+}
+
+}</code></pre></details>
+<details class="code-file"><summary>appState.cpp</summary><pre><code>#include &quot;appState.h&quot;
+
+ScreenState currentScreen = MAIN_MENU;</code></pre></details>
+<details class="code-file"><summary>appState.h</summary><pre><code>#ifndef APPSTATE_H
+#define APPSTATE_H
+
+enum ScreenState
+{
+  BOOT_SCREEN,
+  MAIN_MENU,
+  WIFI_SCAN,
+  WIFI_LIST,
+  WIFI_DETAILS,
+  BLE_SCAN,
+  BLE_LIST,
+  CHANNEL_ANALYZER,
+  CHANNEL_ANALYZER_VIEW,
+  HISTORY,
+  SETTINGS,
+  ABOUT
+};
+
+extern ScreenState currentScreen;
+
+#endif</code></pre></details>
+<details class="code-file"><summary>bleScanner.cpp</summary><pre><code>#include &quot;bleScanner.h&quot;
+
+#include &lt;NimBLEDevice.h&gt;
+
+#include &quot;display.h&quot;
+#include &quot;menu.h&quot;
+#include &quot;buttons.h&quot;
+#include &quot;appState.h&quot;
+
+// -------------------- CONFIG --------------------
+#define MAX_BLE_DEVICES 25
+
+// -------------------- STORAGE --------------------
+String bleName[MAX_BLE_DEVICES];
+String bleAddr[MAX_BLE_DEVICES];
+int bleRSSI[MAX_BLE_DEVICES];
+
+int bleCount = 0;
+int selectedIndex = 0;
+
+bool scanDone = false;
+
+// -------------------- FORWARD DECLARATION --------------------
+void drawBLEList();
+
+// -------------------- SCAN CALLBACK --------------------
+class MyAdvertisedDeviceCallbacks
+{
+public:
+    void onResult(NimBLEAdvertisedDevice* device)
+    {
+        if (bleCount &gt;= MAX_BLE_DEVICES) return;
+
+        std::string addrStd = device-&gt;getAddress().toString();
+        String addr = String(addrStd.c_str());
+
+        // avoid duplicates
+        for (int i = 0; i &lt; bleCount; i++)
+        {
+            if (bleAddr[i] == addr)
+                return;
+        }
+
+        if (device-&gt;haveName())
+            bleName[bleCount] = device-&gt;getName().c_str();
+        else
+            bleName[bleCount] = &quot;Unknown&quot;;
+
+        bleAddr[bleCount] = addr;
+        bleRSSI[bleCount] = device-&gt;getRSSI();
+
+        bleCount++;
+    }
+};
+
+MyAdvertisedDeviceCallbacks callbacks;
+
+// -------------------- START SCAN --------------------
+void startBLEScan()
+{
+    oled.clearBuffer();
+    oled.setFont(u8g2_font_ncenB08_tr);
+    oled.drawStr(10, 30, &quot;Scanning BLE...&quot;);
+    oled.sendBuffer();
+
+    bleCount = 0;
+    selectedIndex = 0;
+    scanDone = false;
+
+    static bool initDone = false;
+    if (!initDone)
+    {
+        NimBLEDevice::init(&quot;&quot;);
+        initDone = true;
+    }
+
+    NimBLEScan* scan = NimBLEDevice::getScan();
+
+    // IMPORTANT FIX for ESP32 core 3.3.7
+    scan-&gt;setScanCallbacks((NimBLEScanCallbacks*)&amp;callbacks, false);
+
+    scan-&gt;setActiveScan(true);
+    scan-&gt;setInterval(45);
+    scan-&gt;setWindow(15);
+
+    scan-&gt;start(5, false);
+    scan-&gt;stop();
+
+    scanDone = true;
+
+    drawBLEList();
+}
+
+// -------------------- DRAW LIST --------------------
+void drawBLEList()
+{
+    oled.clearBuffer();
+    oled.setFont(u8g2_font_6x12_tr);
+
+    oled.drawStr(0, 10, &quot;BLE Devices&quot;);
+
+    int total = bleCount + 1;
+
+    int start = 0;
+    if (selectedIndex &gt; 3)
+        start = selectedIndex - 3;
+
+    for (int i = 0; i &lt; 5; i++)
+    {
+        int item = start + i;
+        if (item &gt;= total) break;
+
+        if (item == selectedIndex)
+            oled.drawStr(0, 24 + i * 10, &quot;&gt;&quot;);
+
+        if (item == 0)
+        {
+            oled.drawStr(10, 24 + i * 10, &quot;Back&quot;);
+        }
+        else
+        {
+            String name = bleName[item - 1];
+
+            if (name.length() &gt; 14)
+                name = name.substring(0, 14);
+
+            oled.drawStr(10, 24 + i * 10, name.c_str());
+        }
+    }
+
+    oled.sendBuffer();
+}
+
+// -------------------- LOOP --------------------
+void bleScannerLoop()
+{
+    if (!scanDone)
+        return;
+
+    if (upPressed())
+    {
+        if (selectedIndex &gt; 0)
+            selectedIndex--;
+
+        drawBLEList();
+    }
+
+    if (downPressed())
+    {
+        if (selectedIndex &lt; bleCount)
+            selectedIndex++;
+
+        drawBLEList();
+    }
+
+    if (selectPressed())
+    {
+        // BACK
+        if (selectedIndex == 0)
+        {
+            currentScreen = MAIN_MENU;
+            drawMenu();
+            return;
+        }
+
+        int id = selectedIndex - 1;
+
+        // DEVICE DETAILS SCREEN
+        oled.clearBuffer();
+        oled.setFont(u8g2_font_6x12_tr);
+
+        oled.drawStr(0, 10, bleName[id].c_str());
+        oled.drawLine(0, 14, 128, 14);
+
+        oled.setCursor(0, 28);
+        oled.print(&quot;RSSI: &quot;);
+        oled.print(bleRSSI[id]);
+
+        oled.setCursor(0, 44);
+        oled.print(&quot;MAC:&quot;);
+
+        oled.drawStr(0, 58, bleAddr[id].c_str());
+
+        oled.sendBuffer();
+
+        while (!selectPressed())
+            delay(10);
+
+        while (selectPressed())
+            delay(10);
+
+        drawBLEList();
+    }
+}</code></pre></details>
+<details class="code-file"><summary>bleScanner.h</summary><pre><code>#ifndef BLE_SCANNER_H
+#define BLE_SCANNER_H
+
+void startBLEScan();
+void bleScannerLoop();
+void drawBLEList();
+
+#endif</code></pre></details>
+<details class="code-file"><summary>buttons.cpp</summary><pre><code>#include &quot;buttons.h&quot;
+#include &lt;Arduino.h&gt;
+
+void buttonsInit()
+{
+    pinMode(BTN_UP, INPUT_PULLUP);
+    pinMode(BTN_DOWN, INPUT_PULLUP);
+    pinMode(BTN_SELECT, INPUT_PULLUP);
+}
+
+bool upPressed()
+{
+    if(digitalRead(BTN_UP)==LOW)
+    {
+        delay(180);
+        return true;
+    }
+    return false;
+}
+
+bool downPressed()
+{
+    if(digitalRead(BTN_DOWN)==LOW)
+    {
+        delay(180);
+        return true;
+    }
+    return false;
+}
+
+bool selectPressed()
+{
+    if(digitalRead(BTN_SELECT)==LOW)
+    {
+        delay(180);
+        return true;
+    }
+    return false;
+}</code></pre></details>
+<details class="code-file"><summary>buttons.h</summary><pre><code>#ifndef BUTTONS_H
+#define BUTTONS_H
+
+#define BTN_UP      32
+#define BTN_DOWN    33
+#define BTN_SELECT  25
+
+void buttonsInit();
+
+bool upPressed();
+
+bool downPressed();
+
+bool selectPressed();
+
+#endif</code></pre></details>
+<details class="code-file"><summary>channelAnalyzer.cpp</summary><pre><code>#include &lt;WiFi.h&gt;
+
+#include &quot;channelAnalyzer.h&quot;
+#include &quot;display.h&quot;
+#include &quot;buttons.h&quot;
+#include &quot;menu.h&quot;
+#include &quot;appState.h&quot;
+
+int channelCount[14];
+
+void drawChannels()
+{
+    oled.clearBuffer();
+
+    oled.setFont(u8g2_font_6x12_tr);
+
+    oled.drawStr(0,10,&quot;Channel Analyzer&quot;);
+
+    for(int i=1;i&lt;=5;i++)
+    {
+        char line[25];
+
+        sprintf(line,&quot;CH%2d : %2d&quot;,i,channelCount[i]);
+
+        oled.drawStr(0,18+i*9,line);
+
+        int bar = channelCount[i] * 10;
+
+        if(bar &gt; 55)
+            bar = 55;
+
+        oled.drawBox(65,12+i*9,bar,6);
+    }
+
+    oled.sendBuffer();
+}
+
+void startChannelAnalyzer()
+{
+    oled.clearBuffer();
+    oled.setFont(u8g2_font_ncenB08_tr);
+    oled.drawStr(18,30,&quot;Scanning...&quot;);
+    oled.sendBuffer();
+
+    memset(channelCount,0,sizeof(channelCount));
+
+    WiFi.mode(WIFI_STA);
+    WiFi.disconnect(true,true);
+    delay(500);
+
+    int n = WiFi.scanNetworks();
+
+    for(int i=0;i&lt;n;i++)
+    {
+        int ch = WiFi.channel(i);
+
+        if(ch&gt;=1 &amp;&amp; ch&lt;=13)
+            channelCount[ch]++;
+    }
+
+    drawChannels();
+}
+
+void channelAnalyzerLoop()
+{
+    if(selectPressed())
+    {
+        currentScreen = MAIN_MENU;
+        drawMenu();
+    }
+}</code></pre></details>
+<details class="code-file"><summary>channelAnalyzer.h</summary><pre><code>#ifndef CHANNELANALYZER_H
+#define CHANNELANALYZER_H
+
+void startChannelAnalyzer();
+void channelAnalyzerLoop();
+
+#endif</code></pre></details>
+<details class="code-file"><summary>display.cpp</summary><pre><code>#include &quot;display.h&quot;
+
+U8G2_SH1106_128X64_NONAME_F_HW_I2C oled(U8G2_R0);
+
+void displayInit()
+{
+    oled.begin();
+
+    oled.clearBuffer();
+
+    oled.sendBuffer();
+}
+
+void bootScreen()
+{
+
+    oled.clearBuffer();
+
+    oled.setFont(u8g2_font_ncenB10_tr);
+
+    oled.drawStr(10,20,&quot;Portable&quot;);
+
+    oled.drawStr(8,38,&quot;Wireless&quot;);
+
+    oled.drawStr(16,56,&quot;Analyzer&quot;);
+
+    oled.sendBuffer();
+
+}
+
+void drawMainMenu()
+{
+
+    oled.clearBuffer();
+
+    oled.setFont(u8g2_font_6x12_tr);
+
+    oled.drawStr(0,10,&quot;====================&quot;);
+
+    oled.drawStr(5,24,&quot;Wireless Analyzer&quot;);
+
+    oled.drawStr(0,36,&quot;====================&quot;);
+
+    oled.drawStr(5,50,&quot;&gt; WiFi Scanner&quot;);
+
+    oled.drawStr(5,62,&quot;  BLE Scanner&quot;);
+
+    oled.sendBuffer();
+
+}</code></pre></details>
+<details class="code-file"><summary>display.h</summary><pre><code>#ifndef DISPLAY_H
+#define DISPLAY_H
+
+#include &lt;Arduino.h&gt;
+#include &lt;U8g2lib.h&gt;
+
+extern U8G2_SH1106_128X64_NONAME_F_HW_I2C oled;
+
+void displayInit();
+
+void bootScreen();
+
+void drawMainMenu();
+
+#endif</code></pre></details>
+<details class="code-file"><summary>menu.cpp</summary><pre><code>#include &quot;menu.h&quot;
+#include &quot;display.h&quot;
+#include &quot;buttons.h&quot;
+#include &quot;appState.h&quot;
+
+const char* menuItems[] =
+{
+    &quot;WiFi Scanner&quot;,
+    &quot;BLE Scanner&quot;,
+    &quot;Channel Analyzer&quot;,
+    &quot;Scan History&quot;,
+    &quot;Settings&quot;,
+    &quot;About&quot;
+};
+
+int menuIndex = 0;
+
+void drawMenu()
+{
+    oled.clearBuffer();
+
+    oled.setFont(u8g2_font_6x12_tr);
+
+    oled.drawStr(20,10,&quot;Main Menu&quot;);
+
+    for(int i=0; i&lt;6; i++)
+    {
+        if(i == menuIndex)
+            oled.drawStr(0,22+i*10,&quot;&gt;&quot;);
+
+        oled.drawStr(10,22+i*10,menuItems[i]);
+    }
+
+    oled.sendBuffer();
+}
+
+void menuLoop()
+{
+    if(upPressed())
+    {
+        if(menuIndex &gt; 0)
+            menuIndex--;
+
+        drawMenu();
+    }
+
+    if(downPressed())
+    {
+        if(menuIndex &lt; 5)
+            menuIndex++;
+
+        drawMenu();
+    }
+
+    if(selectPressed())
+    {
+        switch(menuIndex)
+        {
+            case 0:
+                currentScreen = WIFI_SCAN;
+                break;
+
+            case 1:
+                currentScreen = BLE_SCAN;
+                break;
+
+            case 2:
+                currentScreen = CHANNEL_ANALYZER;
+                break;
+
+            case 3:
+                currentScreen = HISTORY;
+                break;
+
+            case 4:
+                currentScreen = SETTINGS;
+                break;
+
+            case 5:
+                currentScreen = ABOUT;
+                break;
+        }
+    }
+}</code></pre></details>
+<details class="code-file"><summary>menu.h</summary><pre><code>#ifndef MENU_H
+#define MENU_H
+
+void menuLoop();
+
+void drawMenu();
+
+#endif</code></pre></details>
+<details class="code-file"><summary>wifiScanner.cpp</summary><pre><code>#include &lt;WiFi.h&gt;
+
+#include &quot;wifiScanner.h&quot;
+#include &quot;display.h&quot;
+#include &quot;buttons.h&quot;
+#include &quot;menu.h&quot;
+#include &quot;appState.h&quot;
+
+WiFiState wifiState =
+{
+    0,
+    0,
+    false
+};
+
+String getSecurity(wifi_auth_mode_t type)
+{
+    switch(type)
+    {
+        case WIFI_AUTH_OPEN: return &quot;OPEN&quot;;
+        case WIFI_AUTH_WEP: return &quot;WEP&quot;;
+        case WIFI_AUTH_WPA_PSK: return &quot;WPA&quot;;
+        case WIFI_AUTH_WPA2_PSK: return &quot;WPA2&quot;;
+        case WIFI_AUTH_WPA_WPA2_PSK: return &quot;WPA/WPA2&quot;;
+        case WIFI_AUTH_WPA3_PSK: return &quot;WPA3&quot;;
+        default: return &quot;UNKNOWN&quot;;
+    }
+}
+
+void startWiFiScan()
+{
+    oled.clearBuffer();
+
+    oled.setFont(u8g2_font_ncenB08_tr);
+
+    oled.drawStr(20,28,&quot;Scanning...&quot;);
+
+    oled.sendBuffer();
+
+    WiFi.mode(WIFI_STA);
+
+    WiFi.disconnect(true,true);
+
+    delay(500);
+
+    wifiState.networkCount = WiFi.scanNetworks();
+
+    wifiState.selectedIndex = 0;
+
+    wifiState.detailScreen = false;
+
+    currentScreen = WIFI_LIST;
+
+    drawWiFiList();
+}
+
+void drawWiFiList()
+{
+    oled.clearBuffer();
+
+    oled.setFont(u8g2_font_6x12_tr);
+
+    oled.drawStr(0,10,&quot;WiFi Networks&quot;);
+
+    int totalItems = wifiState.networkCount + 1;
+
+    int firstVisible = 0;
+
+    if(wifiState.selectedIndex &gt; 3)
+        firstVisible = wifiState.selectedIndex - 3;
+
+    for(int i=0;i&lt;5;i++)
+    {
+        int item = firstVisible + i;
+
+        if(item &gt;= totalItems)
+            break;
+
+        if(item == wifiState.selectedIndex)
+            oled.drawStr(0,24+i*10,&quot;&gt;&quot;);
+
+        if(item == 0)
+        {
+            oled.drawStr(10,24+i*10,&quot;Back&quot;);
+        }
+        else
+        {
+            String ssid = WiFi.SSID(item-1);
+
+            if(ssid==&quot;&quot;)
+                ssid=&quot;Hidden&quot;;
+
+            if(ssid.length()&gt;18)
+                ssid=ssid.substring(0,18);
+
+            oled.drawStr(10,24+i*10,ssid.c_str());
+        }
+    }
+
+    oled.sendBuffer();
+}
+void drawWiFiDetails()
+{
+    oled.clearBuffer();
+
+    oled.setFont(u8g2_font_6x12_tr);
+
+    String ssid = WiFi.SSID(wifiState.selectedIndex - 1);
+
+    if (ssid == &quot;&quot;)
+        ssid = &quot;Hidden&quot;;
+
+    oled.drawStr(0, 10, ssid.c_str());
+
+    oled.drawLine(0, 14, 127, 14);
+
+    oled.setCursor(0, 28);
+    oled.print(&quot;RSSI : &quot;);
+    oled.print(WiFi.RSSI(wifiState.selectedIndex - 1));
+    oled.print(&quot; dBm&quot;);
+
+    oled.setCursor(0, 40);
+    oled.print(&quot;CH   : &quot;);
+    oled.print(WiFi.channel(wifiState.selectedIndex - 1));
+
+    oled.setCursor(0, 52);
+    oled.print(&quot;SEC  : &quot;);
+    oled.print(getSecurity(WiFi.encryptionType(wifiState.selectedIndex - 1)));
+
+    oled.sendBuffer();
+}
+
+void wifiScannerLoop()
+{
+    // -------------------------
+    // WiFi List Screen
+    // -------------------------
+    if(currentScreen == WIFI_LIST)
+    {
+        if(upPressed())
+        {
+            if(wifiState.selectedIndex &gt; 0)
+                wifiState.selectedIndex--;
+
+            drawWiFiList();
+        }
+
+        if(downPressed())
+        {
+            if(wifiState.selectedIndex &lt; wifiState.networkCount)
+                wifiState.selectedIndex++;
+
+            drawWiFiList();
+        }
+
+        if(selectPressed())
+        {
+            // BACK selected
+            if(wifiState.selectedIndex == 0)
+            {
+                currentScreen = MAIN_MENU;
+                drawMenu();
+                return;
+            }
+
+            // Network selected
+            currentScreen = WIFI_DETAILS;
+            drawWiFiDetails();
+            return;
+        }
+    }
+
+    // -------------------------
+    // Details Screen
+    // -------------------------
+    else if(currentScreen == WIFI_DETAILS)
+    {
+        if(selectPressed())
+        {
+            currentScreen = WIFI_LIST;
+            drawWiFiList();
+        }
+    }
+}</code></pre></details>
+<details class="code-file"><summary>wifiScanner.h</summary><pre><code>#ifndef WIFISCANNER_H
+#define WIFISCANNER_H
+
+struct WiFiState
+{
+    int networkCount;
+    int selectedIndex;
+    bool detailScreen;
+};
+
+extern WiFiState wifiState;
+
+void startWiFiScan();
+
+void drawWiFiList();
+
+void drawWiFiDetails();
+
+void wifiScannerLoop();
+
+#endif</code></pre></details>
+</section>
+
+<section class="card">
+  <h2>My Contribution</h2>
+  <p>
+    Designed and developed the project architecture, implemented the ESP32 firmware
+    and wireless-analysis modules, integrated the OLED display and physical controls,
+    developed the Wi-Fi/BLE scanning and channel-analysis functionality, and carried
+    out testing and debugging of the system.
+  </p>
+</section>
+
+<section class="card">
+  <h2>Project Documentation</h2>
+  <p>A portfolio documentation PDF is included with this project package as a draft based on the supplied source code.</p>
+  <a class="primary-btn" href="wireless-security-analyzer-documentation.pdf" target="_blank">View Documentation PDF</a>
+</section>
+
+<section class="notice">
+  <strong>Responsible-use note:</strong>
+  This analyzer should be used only for networks and wireless devices that you own or
+  have explicit permission to assess. It is intended for learning, diagnostics, and
+  authorized security analysis.
+</section>
+</main>
+</body>
+</html>

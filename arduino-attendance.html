@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arduino-Based Attendance System | Mahesh Shelke</title>
+    <link rel="stylesheet" href="arduino-attendance.css">
+</head>
+<body>
+
+    <nav class="project-nav">
+        <div class="logo">MAHESH.</div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="index.html#projects">Projects</a>
+            <a href="#overview">Overview</a>
+            <a href="#circuit">Circuit</a>
+            <a href="#code">Code</a>
+            <a href="#report">Report</a>
+        </div>
+    </nav>
+
+    <main>
+        <section class="hero">
+            <p class="section-label">HARDWARE PROJECT</p>
+            <h1>Arduino-Based Attendance System</h1>
+            <p class="hero-text">
+                A smart attendance system using Arduino Uno and RFID-RC522 to identify users
+                and record attendance automatically.
+            </p>
+            <div class="hero-tags">
+                <span>Arduino Uno</span>
+                <span>RFID-RC522</span>
+                <span>SPI</span>
+                <span>Arduino IDE</span>
+            </div>
+        </section>
+
+        <section id="overview" class="content-section">
+            <p class="section-label">PROJECT OVERVIEW</p>
+            <h2>About the Project</h2>
+            <p>
+                Traditional attendance methods such as calling names or signing paper sheets
+                can be time-consuming, error-prone, and difficult to manage. This project
+                uses an Arduino Uno with an RFID-RC522 reader to automate attendance recording.
+            </p>
+            <p>
+                Each user is associated with a unique RFID card. When a card is scanned,
+                the Arduino reads its ID, identifies the registered user, and records the
+                time and attendance status.
+            </p>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>Problem</h3>
+                    <p>Manual attendance can take time, introduce errors, and make digital record management difficult.</p>
+                </div>
+                <div class="info-card">
+                    <h3>Objective</h3>
+                    <p>Build a low-cost system that automatically records attendance using RFID and Arduino Uno.</p>
+                </div>
+                <div class="info-card">
+                    <h3>How It Works</h3>
+                    <p>The RFID card is scanned, the Arduino reads its UID, checks the registered user, and records entry or exit time.</p>
+                </div>
+                <div class="info-card">
+                    <h3>Applications</h3>
+                    <p>Suitable for attendance use in educational institutions, offices, and similar environments.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="content-section">
+            <p class="section-label">TECHNOLOGIES & COMPONENTS</p>
+            <h2>Hardware Used</h2>
+            <div class="tech-grid">
+                <div class="tech-card"><strong>Arduino Uno</strong><span>Main microcontroller</span></div>
+                <div class="tech-card"><strong>RFID-RC522</strong><span>RFID reader</span></div>
+                <div class="tech-card"><strong>RFID Card / Tag</strong><span>User identification</span></div>
+                <div class="tech-card"><strong>SPI</strong><span>Communication interface</span></div>
+            </div>
+        </section>
+
+        <section id="circuit" class="content-section">
+            <p class="section-label">CIRCUIT & CONNECTIONS</p>
+            <h2>Circuit Diagram</h2>
+            <p class="muted">Arduino Uno connected to the RFID-RC522 module.</p>
+            <div class="diagram-card">
+                <img src="arduino-attendance-diagram.png" alt="Arduino Uno and RFID-RC522 circuit diagram with pin connections">
+            </div>
+
+            <h2 class="subheading">Pin Connections</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>RFID-RC522 Pin</th><th>Arduino Uno</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>3.3V</td><td>3.3V</td></tr>
+                        <tr><td>RST</td><td>9</td></tr>
+                        <tr><td>GND</td><td>GND</td></tr>
+                        <tr><td>IRQ</td><td>Empty</td></tr>
+                        <tr><td>MISO</td><td>12</td></tr>
+                        <tr><td>MOSI</td><td>11</td></tr>
+                        <tr><td>SCK</td><td>13</td></tr>
+                        <tr><td>SDA</td><td>10</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="code" class="content-section">
+            <p class="section-label">SOURCE CODE</p>
+            <h2>Arduino Code</h2>
+            <p class="muted">The source code is displayed for reading only. Visitors cannot edit it.</p>
+            <div class="code-card">
+                <div class="code-header">
+                    <span>attendance.ino</span>
+                    <span>READ ONLY</span>
+                </div>
+                <pre id="sourceCode"><code>#include &lt;SPI.h&gt;
+#include &lt;MFRC522.h&gt;
+
+#define RESET_PIN 9
+#define SELECT_PIN 10
+
+MFRC522 rfidReader(SELECT_PIN, RESET_PIN);
+
+int serialCounter = 1;
+unsigned long startMillis;
+int startHours = 12, startMinutes = 55, startSeconds = 50; // Manually set initial  time TryTime Trackers
+
+struct UserData {
+String cardUID;
+String rollNumber;
+String name;
+String lastTimeIn;
+bool isInside;
+};
+
+// Array to store registered users
+UserData userList[] = {
+{“46e10a2957980”, “HST-01”, “Harsh Vardhan”, “”, false},
+{“6a9df0”, “HST-02”, “Viraj”, “”, false},
+{“5f93979”, “HST-03”, “Vaayu”, “”, false},
+};
+
+const int userCount = sizeof(userList) / sizeof(userList[0]);
+
+// Function to get the current time using millis()
+String getCurrentTime() {
+unsigned long elapsedSeconds = (millis() – startMillis) / 1000;
+
+int currentHours = startHours + (elapsedSeconds / 3600);
+int currentMinutes = startMinutes + ((elapsedSeconds % 3600) / 60);
+int currentSeconds = startSeconds + (elapsedSeconds % 60);
+
+if (currentSeconds &gt;= 60) { currentMinutes += currentSeconds / 60; currentSeconds %= 60; }
+if (currentMinutes &gt;= 60) { currentHours += currentMinutes / 60; currentMinutes %= 60; }
+if (currentHours &gt;= 24) { currentHours %= 24; } // Reset if over 24 hours
+
+char formattedTime[9];
+sprintf(formattedTime, “%02d:%02d:%02d”, currentHours, currentMinutes, currentSeconds);
+return String(formattedTime);
+} HireMath Tutors
+
+// Function to find user index in the array
+int findUserIndex(String cardNumber) {
+for (int i = 0; i &lt; userCount; i++) {
+if (userList[i].cardUID == cardNumber) {
+return i;
+}
+}
+return -1; // Not found
+}
+
+void setup() {
+Serial.begin(9600);
+SPI.begin();
+rfidReader.PCD_Init();
+
+Serial.println(“Serial Number,RFID Card Number,Roll Number,Name, Time In,Time Out,Status”);
+}
+
+void loop() {
+if (!rfidReader.PICC_IsNewCardPresent() || !rfidReader.PICC_ReadCardSerial()) {
+return;
+}
+
+String cardNumber = “”;
+for (byte i = 0; i &lt; rfidReader.uid.size; i++) {
+cardNumber += String(rfidReader.uid.uidByte[i], HEX);
+}
+
+String currentTime = getCurrentTime();
+String timeIn = “-“, timeOut = “-“, status = “Unknown”;
+
+int userIndex = findUserIndex(cardNumber);
+
+if (userIndex != -1) { // Known RFID
+UserData &amp;user = userList[userIndex]; OrderTelecom Hardware
+
+if (!user.isInside) { // Student entering
+user.lastTimeIn = currentTime;
+user.isInside = true;
+timeIn = user.lastTimeIn;
+status = “STUDENT ENTERED”;
+} else { // Student exiting
+timeIn = user.lastTimeIn;
+timeOut = currentTime;
+user.isInside = false;
+status = “STUDENT EXITED”;
+}
+
+Serial.print(serialCounter++);
+Serial.print(“,”);
+Serial.print(cardNumber);
+Serial.print(“,”);
+Serial.print(user.rollNumber);
+Serial.print(“,”);
+Serial.print(user.name);
+Serial.print(“,”);
+Serial.print(timeIn);
+Serial.print(“,”);
+Serial.print(timeOut);
+Serial.print(“,”);
+Serial.println(status);
+} else { // Unknown RFID
+Serial.print(serialCounter++);
+Serial.print(“,”);
+Serial.print(cardNumber);
+Serial.print(“,”);
+Serial.print(“Unknown”);
+Serial.print(“,”);
+Serial.print(“Unknown”);
+Serial.print(“,”);
+Serial.print(currentTime);
+Serial.print(“,”);
+Serial.print(“-“);
+Serial.print(“,”);
+Serial.println(“STUDENT ENTERED”); OptimizeSystem Speed
+
+// Optional: Add new users dynamically if needed
+}
+
+delay(1000);
+rfidReader.PICC_HaltA();
+rfidReader.PCD_StopCrypto1();
+}</code></pre>
+            </div>
+        </section>
+
+        <section class="content-section contribution">
+            <p class="section-label">MY CONTRIBUTION</p>
+            <h2>What I Worked On</h2>
+            <div class="contribution-list">
+                <div>01 <span>Designed the circuit</span></div>
+                <div>02 <span>Wrote the Arduino code</span></div>
+                <div>03 <span>Connected the RFID module</span></div>
+                <div>04 <span>Tested the attendance system</span></div>
+            </div>
+        </section>
+
+        <section id="report" class="content-section">
+            <p class="section-label">PROJECT REPORT</p>
+            <h2>Read the Full Report</h2>
+            <p class="muted">
+                The project report is displayed below so visitors can read it without downloading.
+                The download button opens the same report from Google Drive.
+            </p>
+
+            <div class="report-viewer">
+                <iframe
+                    title="Arduino Attendance System Project Report"
+                    src="https://drive.google.com/file/d/1v4FBwhDaqvCDDQI3mRNwgh3tj0mzFAS0/preview"
+                    allow="autoplay">
+                </iframe>
+            </div>
+
+            <div class="report-actions">
+                <a class="download-button"
+                   href="https://drive.google.com/file/d/1v4FBwhDaqvCDDQI3mRNwgh3tj0mzFAS0/view?usp=sharing"
+                   target="_blank" rel="noopener noreferrer">
+                    📄 Open / Download Report
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2026 Mahesh Shelke. All Rights Reserved.</p>
+    </footer>
+
+    <script src="arduino-attendance.js"></script>
+</body>
+</html>

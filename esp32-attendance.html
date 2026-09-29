@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT-Based Smart Attendance System | Mahesh Shelke</title>
+    <link rel="stylesheet" href="esp32-attendance.css">
+</head>
+<body>
+    <nav class="project-nav">
+        <div class="logo">MAHESH.</div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="index.html#projects">Projects</a>
+            <a href="#overview">Overview</a>
+            <a href="#circuit">Circuit</a>
+            <a href="#code">Code</a>
+            <a href="#report">Report</a>
+        </div>
+    </nav>
+
+    <main>
+        <section class="hero">
+            <p class="section-label">IOT / HARDWARE PROJECT</p>
+            <h1>IoT-Based Smart Attendance System</h1>
+            <p class="hero-text">
+                A smart attendance system built with ESP32, RFID, OLED display,
+                Wi-Fi and Google Sheets for connected attendance management.
+            </p>
+            <div class="hero-tags">
+                <span>ESP32</span>
+                <span>RFID-RC522</span>
+                <span>OLED</span>
+                <span>Wi-Fi</span>
+                <span>Google Sheets</span>
+            </div>
+        </section>
+
+        <section id="overview" class="content-section">
+            <p class="section-label">PROJECT OVERVIEW</p>
+            <h2>About the Project</h2>
+            <p>
+                This project uses an ESP32 and RFID-RC522 reader to identify registered
+                students from their RFID cards. Student information is displayed on an
+                OLED screen, attendance is sent to Google Sheets over Wi-Fi, and a small
+                web page hosted by the ESP32 can show the present-student list.
+            </p>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>Problem</h3>
+                    <p>Manual attendance can be time-consuming and difficult to manage accurately.</p>
+                </div>
+                <div class="info-card">
+                    <h3>Objective</h3>
+                    <p>Automate attendance using RFID and provide connected, real-time information.</p>
+                </div>
+                <div class="info-card">
+                    <h3>How It Works</h3>
+                    <p>The RFID card is scanned, the UID is matched with a student, the OLED shows the result, and valid attendance is sent online.</p>
+                </div>
+                <div class="info-card">
+                    <h3>Connected Features</h3>
+                    <p>Wi-Fi connectivity, Google Sheets integration, OLED feedback, buzzer alerts, and an ESP32 web interface.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="content-section">
+            <p class="section-label">TECHNOLOGIES & COMPONENTS</p>
+            <h2>Hardware & Software Used</h2>
+            <div class="tech-grid">
+                <div class="tech-card"><strong>ESP32</strong><span>Main Wi-Fi microcontroller</span></div>
+                <div class="tech-card"><strong>RFID-RC522</strong><span>Card identification</span></div>
+                <div class="tech-card"><strong>0.96&quot; OLED</strong><span>I2C display</span></div>
+                <div class="tech-card"><strong>Buzzer</strong><span>Scan feedback</span></div>
+                <div class="tech-card"><strong>Google Sheets</strong><span>Online attendance storage</span></div>
+                <div class="tech-card"><strong>Arduino IDE</strong><span>Programming environment</span></div>
+            </div>
+        </section>
+
+        <section id="circuit" class="content-section">
+            <p class="section-label">CIRCUIT DIAGRAM</p>
+            <h2>System Connections</h2>
+            <p class="muted">
+                The diagram below shows the ESP32 connected to the RFID-RC522 reader,
+                OLED display and buzzer.
+            </p>
+            <div class="diagram-card">
+                <img src="esp32-attendance-circuit.png" alt="ESP32 RFID OLED buzzer circuit diagram">
+            </div>
+        </section>
+
+        <section class="content-section">
+            <p class="section-label">SYSTEM DETAILS</p>
+            <h2>Pin Configuration</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Component</th>
+                            <th>ESP32 Pin</th>
+                            <th>Function</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>RFID-RC522 SDA / SS</td><td>GPIO 5</td><td>Chip select</td></tr>
+                        <tr><td>RFID-RC522 RST</td><td>GPIO 17</td><td>Reset</td></tr>
+                        <tr><td>RFID-RC522 MISO</td><td>SPI</td><td>SPI data</td></tr>
+                        <tr><td>RFID-RC522 MOSI</td><td>SPI</td><td>SPI data</td></tr>
+                        <tr><td>RFID-RC522 SCK</td><td>SPI</td><td>SPI clock</td></tr>
+                        <tr><td>OLED</td><td>I2C</td><td>Display communication</td></tr>
+                        <tr><td>Buzzer</td><td>GPIO 4</td><td>Audio feedback</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="note">
+                The exact wiring should be checked against the physical circuit and your project report before publishing any pin values as final documentation.
+            </p>
+        </section>
+
+        <section id="code" class="content-section">
+            <p class="section-label">SOURCE CODE</p>
+            <h2>ESP32 Arduino Code</h2>
+            <p class="muted">The code is displayed for visitors to read. It is not editable and is not executed in the browser.</p>
+            <div class="code-box">
+                <div class="code-header">
+                    <span>main.ino</span>
+                    <span>Read Only</span>
+                </div>
+                <pre><code>#include &lt;WiFi.h&gt;
+#include &lt;HTTPClient.h&gt;
+#include &lt;WiFiClientSecure.h&gt;
+#include &lt;SPI.h&gt;
+#include &lt;MFRC522.h&gt;
+#include &lt;Wire.h&gt;
+#include &lt;U8g2lib.h&gt;
+#include &lt;WebServer.h&gt;
+
+// ---------------- PIN DEFINITIONS ----------------
+#define SS_PIN 5
+#define RST_PIN 17
+#define BUZZER 4
+
+// ---------------- RFID ----------------
+MFRC522 rfid(SS_PIN, RST_PIN);
+
+// ---------------- OLED ----------------
+U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(
+  U8G2_R0,
+  U8X8_PIN_NONE
+);
+
+// ---------------- WIFI ----------------
+// CHANGE THESE TO YOUR WIFI DETAILS
+const char* ssid = &quot;YOUR_WIFI_NAME&quot;;
+const char* password = &quot;YOUR_WIFI_PASSWORD&quot;;
+
+// ---------------- GOOGLE SCRIPT ----------------
+// CHANGE THIS TO YOUR GOOGLE APPS SCRIPT WEB APP URL
+String scriptURL = &quot;YOUR_GOOGLE_SCRIPT_URL&quot;;
+
+// ---------------- WEB SERVER ----------------
+WebServer server(80);
+
+String attendanceList = &quot;&quot;;
+int srNo = 1;
+
+// ---------------- IP ADDRESS ----------------
+String ipAddress = &quot;&quot;;
+
+// ---------------- WEB PAGE ----------------
+void handleRoot() {
+
+  String html = &quot;&lt;!DOCTYPE html&gt;&quot;;
+  html += &quot;&lt;html&gt;&quot;;
+  html += &quot;&lt;head&gt;&quot;;
+  html += &quot;&lt;title&gt;Smart Attendance&lt;/title&gt;&quot;;
+
+  // Refresh page every 3 seconds
+  html += &quot;&lt;meta http-equiv=&#x27;refresh&#x27; content=&#x27;3&#x27;&gt;&quot;;
+
+  html += &quot;&lt;style&gt;&quot;;
+
+  html += &quot;body{&quot;;
+  html += &quot;font-family:Arial;&quot;;
+  html += &quot;text-align:center;&quot;;
+  html += &quot;background:#f2f2f2;&quot;;
+  html += &quot;}&quot;;
+
+  html += &quot;table{&quot;;
+  html += &quot;margin:auto;&quot;;
+  html += &quot;border-collapse:collapse;&quot;;
+  html += &quot;width:60%;&quot;;
+  html += &quot;}&quot;;
+
+  html += &quot;th,td{&quot;;
+  html += &quot;border:1px solid black;&quot;;
+  html += &quot;padding:10px;&quot;;
+  html += &quot;}&quot;;
+
+  html += &quot;th{&quot;;
+  html += &quot;background:#4CAF50;&quot;;
+  html += &quot;color:white;&quot;;
+  html += &quot;}&quot;;
+
+  html += &quot;&lt;/style&gt;&quot;;
+
+  html += &quot;&lt;/head&gt;&quot;;
+  html += &quot;&lt;body&gt;&quot;;
+
+  html += &quot;&lt;h2&gt;Smart Attendance System&lt;/h2&gt;&quot;;
+  html += &quot;&lt;h3&gt;Present Students&lt;/h3&gt;&quot;;
+
+  html += &quot;&lt;table&gt;&quot;;
+
+  html += &quot;&lt;tr&gt;&quot;;
+  html += &quot;&lt;th&gt;Sr.No&lt;/th&gt;&quot;;
+  html += &quot;&lt;th&gt;Name&lt;/th&gt;&quot;;
+  html += &quot;&lt;th&gt;Roll&lt;/th&gt;&quot;;
+  html += &quot;&lt;/tr&gt;&quot;;
+
+  html += attendanceList;
+
+  html += &quot;&lt;/table&gt;&quot;;
+
+  html += &quot;&lt;/body&gt;&quot;;
+  html += &quot;&lt;/html&gt;&quot;;
+
+  server.send(200, &quot;text/html&quot;, html);
+}
+
+// ---------------- SETUP ----------------
+void setup() {
+
+  Serial.begin(115200);
+
+  // Buzzer
+  pinMode(BUZZER, OUTPUT);
+  digitalWrite(BUZZER, LOW);
+
+  // SPI
+  SPI.begin();
+
+  // RFID
+  rfid.PCD_Init();
+
+  // OLED
+  u8g2.begin();
+
+  // ---------------- WIFI CONNECTION ----------------
+
+  u8g2.clearBuffer();
+
+  u8g2.setFont(u8g2_font_ncenB08_tr);
+  u8g2.drawStr(0, 20, &quot;Connecting WiFi...&quot;);
+
+  u8g2.sendBuffer();
+
+  Serial.println();
+  Serial.print(&quot;Connecting to WiFi&quot;);
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+
+    delay(500);
+
+    Serial.print(&quot;.&quot;);
+  }
+
+  Serial.println();
+  Serial.println(&quot;WiFi Connected!&quot;);
+
+  // Get ESP32 IP address
+  ipAddress = WiFi.localIP().toString();
+
+  Serial.print(&quot;ESP32 IP Address: &quot;);
+  Serial.println(ipAddress);
+
+  // ---------------- START WEB SERVER ----------------
+
+  server.on(&quot;/&quot;, handleRoot);
+
+  server.begin();
+
+  Serial.println(&quot;Web Server Started&quot;);
+
+  // ---------------- OLED ----------------
+
+  u8g2.clearBuffer();
+
+  u8g2.setFont(u8g2_font_ncenB08_tr);
+
+  u8g2.drawStr(0, 20, &quot;WiFi Connected!&quot;);
+
+  u8g2.drawStr(0, 40, &quot;Scan RFID Card&quot;);
+
+  u8g2.sendBuffer();
+
+  delay(2000);
+}
+
+// ---------------- LOOP ----------------
+void loop() {
+
+  // Handle web server requests
+  server.handleClient();
+
+  // Check for RFID card
+  if (!rfid.PICC_IsNewCardPresent()) {
+    return;
+  }
+
+  if (!rfid.PICC_ReadCardSerial()) {
+    return;
+  }
+
+  // ---------------- READ UID ----------------
+
+  String uid = &quot;&quot;;
+
+  for (byte i = 0; i &lt; rfid.uid.size; i++) {
+
+    if (rfid.uid.uidByte[i] &lt; 0x10) {
+      uid += &quot;0&quot;;
+    }
+
+    uid += String(rfid.uid.uidByte[i], HEX);
+  }
+
+  uid.toUpperCase();
+
+  Serial.println();
+  Serial.println(&quot;Card UID: &quot; + uid);
+
+  // ---------------- STUDENT DATABASE ----------------
+
+  String name = &quot;&quot;;
+  String roll = &quot;&quot;;
+
+  if (uid == &quot;2AE860C4&quot;) {
+
+    name = &quot;Mahesh&quot;;
+    roll = &quot;49&quot;;
+  }
+
+  else if (uid == &quot;6A47D7C4&quot;) {
+
+    name = &quot;Gaurav&quot;;
+    roll = &quot;57&quot;;
+  }
+
+  else if (uid == &quot;B1F94295&quot;) {
+
+    name = &quot;Karan&quot;;
+    roll = &quot;43&quot;;
+  }
+
+  else if (uid == &quot;81723895&quot;) {
+
+    name = &quot;Om&quot;;
+    roll = &quot;50&quot;;
+  }
+
+  else {
+
+    name = &quot;Unknown&quot;;
+    roll = &quot;0&quot;;
+  }
+
+  Serial.println(&quot;Name: &quot; + name);
+  Serial.println(&quot;Roll: &quot; + roll);
+
+  // ---------------- OLED DISPLAY ----------------
+
+  u8g2.clearBuffer();
+
+  // Show IP address
+  u8g2.setFont(u8g2_font_5x7_tr);
+
+  int ipWidth = u8g2.getStrWidth(ipAddress.c_str());
+
+  u8g2.drawStr(
+    128 - ipWidth,
+    8,
+    ipAddress.c_str()
+  );
+
+  // Show name
+  u8g2.setFont(u8g2_font_logisoso16_tr);
+
+  u8g2.drawStr(
+    0,
+    30,
+    name.c_str()
+  );
+
+  // Show attendance information
+  u8g2.setFont(u8g2_font_ncenB08_tr);
+
+  if (name != &quot;Unknown&quot;) {
+
+    String rollText = &quot;Roll: &quot; + roll;
+
+    u8g2.drawStr(
+      0,
+      50,
+      rollText.c_str()
+    );
+
+    u8g2.drawStr(
+      0,
+      62,
+      &quot;Present&quot;
+    );
+
+  }
+
+  else {
+
+    u8g2.drawStr(
+      0,
+      50,
+      &quot;Not Registered&quot;
+    );
+  }
+
+  u8g2.sendBuffer();
+
+  // ---------------- BUZZER ----------------
+
+  if (name != &quot;Unknown&quot;) {
+
+    // Successful scan
+    tone(BUZZER, 2000);
+
+    delay(200);
+
+    noTone(BUZZER);
+  }
+
+  else {
+
+    // Unknown card
+    tone(BUZZER, 800);
+
+    delay(500);
+
+    noTone(BUZZER);
+  }
+
+  // ---------------- ADD TO WEB PAGE ----------------
+
+  if (name != &quot;Unknown&quot;) {
+
+    attendanceList += &quot;&lt;tr&gt;&quot;;
+
+    attendanceList += &quot;&lt;td&gt;&quot;;
+    attendanceList += String(srNo++);
+    attendanceList += &quot;&lt;/td&gt;&quot;;
+
+    attendanceList += &quot;&lt;td&gt;&quot;;
+    attendanceList += name;
+    attendanceList += &quot;&lt;/td&gt;&quot;;
+
+    attendanceList += &quot;&lt;td&gt;&quot;;
+    attendanceList += roll;
+    attendanceList += &quot;&lt;/td&gt;&quot;;
+
+    attendanceList += &quot;&lt;/tr&gt;&quot;;
+  }
+
+  // ---------------- GOOGLE SHEETS ----------------
+
+  if (WiFi.status() == WL_CONNECTED &amp;&amp;
+      name != &quot;Unknown&quot;) {
+
+    WiFiClientSecure client;
+
+    // For testing with Google Apps Script
+    client.setInsecure();
+
+    HTTPClient http;
+
+    String url = scriptURL;
+
+    url += &quot;?name=&quot;;
+    url += name;
+
+    url += &quot;&amp;roll=&quot;;
+    url += roll;
+
+    Serial.println(&quot;Sending attendance to Google Sheets...&quot;);
+
+    if (http.begin(client, url)) {
+
+      // Follow redirects
+      http.setFollowRedirects(
+        HTTPC_STRICT_FOLLOW_REDIRECTS
+      );
+
+      int httpCode = http.GET();
+
+      Serial.print(&quot;HTTP Response Code: &quot;);
+      Serial.println(httpCode);
+
+      if (httpCode &gt; 0) {
+
+        String response = http.getString();
+
+        Serial.println(&quot;Google Response:&quot;);
+        Serial.println(response);
+      }
+
+      else {
+
+        Serial.print(&quot;HTTP Error: &quot;);
+        Serial.println(http.errorToString(httpCode));
+      }
+
+      http.end();
+    }
+
+    else {
+
+      Serial.println(&quot;Unable to connect to Google Script&quot;);
+    }
+  }
+
+  // ---------------- STOP RFID CARD ----------------
+
+  rfid.PICC_HaltA();
+
+  rfid.PCD_StopCrypto1();
+
+  // ---------------- READY DOUBLE BEEP ----------------
+
+  delay(500);
+
+  tone(BUZZER, 2000);
+  delay(150);
+  noTone(BUZZER);
+
+  delay(150);
+
+  tone(BUZZER, 2000);
+  delay(150);
+  noTone(BUZZER);
+
+  // Delay before next scan
+  delay(1000);
+}</code></pre>
+            </div>
+        </section>
+
+        <section class="content-section contribution">
+            <p class="section-label">PROJECT WORK</p>
+            <h2>My Contribution</h2>
+            <p>
+                I designed the circuit, wrote the Arduino code, connected the RFID module,
+                and tested the attendance system.
+            </p>
+        </section>
+
+        <section id="report" class="content-section">
+            <p class="section-label">PROJECT REPORT</p>
+            <h2>Read the Full Report</h2>
+            <p class="muted">
+                Visitors can read the report directly in the browser. They can also open the
+                Google Drive file separately if they want to download it.
+            </p>
+
+            <div class="report-viewer">
+                <iframe
+                    title="IoT-Based Smart Attendance System Project Report"
+                    src="https://drive.google.com/file/d/1S4Ji6x-xn_BzqLvAJGZ9hISE7s39wHt0/preview"
+                    allow="autoplay">
+                </iframe>
+            </div>
+
+            <div class="report-actions">
+                <a class="download-button"
+                   href="https://drive.google.com/file/d/1S4Ji6x-xn_BzqLvAJGZ9hISE7s39wHt0/view?usp=sharing"
+                   target="_blank" rel="noopener noreferrer">
+                    📄 Open / Download Report
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2026 Mahesh Shelke. All Rights Reserved.</p>
+    </footer>
+</body>
+</html>

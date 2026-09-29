@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+<rect width="1200" height="700" fill="#0b0f19"/>
+<text x="600" y="55" fill="#00d9ff" font-family="Arial" font-size="30" text-anchor="middle" font-weight="700">Wireless Security Analyzer — System Architecture</text>
+
+<rect x="425" y="105" width="350" height="120" rx="18" fill="#111827" stroke="#00d9ff" stroke-width="2"/>
+<text x="600" y="145" fill="#fff" font-family="Arial" font-size="24" text-anchor="middle" font-weight="700">ESP32 Controller</text>
+<text x="600" y="178" fill="#cbd5e1" font-family="Arial" font-size="17" text-anchor="middle">Application state + main loop</text>
+<text x="600" y="202" fill="#cbd5e1" font-family="Arial" font-size="15" text-anchor="middle">WirelessSecurityAnalyzer.ino / appState</text>
+
+<rect x="60" y="300" width="300" height="145" rx="18" fill="#111827" stroke="#00d9ff" stroke-width="2"/>
+<text x="210" y="340" fill="#fff" font-family="Arial" font-size="22" text-anchor="middle" font-weight="700">Wi-Fi Scanner</text>
+<text x="210" y="373" fill="#cbd5e1" font-family="Arial" font-size="16" text-anchor="middle">Network discovery</text>
+<text x="210" y="398" fill="#cbd5e1" font-family="Arial" font-size="16" text-anchor="middle">SSID • RSSI • Channel</text>
+<text x="210" y="423" fill="#cbd5e1" font-family="Arial" font-size="16" text-anchor="middle">Security type</text>
+
+<rect x="450" y="300" width="300" height="145" rx="18" fill="#111827" stroke="#00d9ff" stroke-width="2"/>
+<text x="600" y="340" fill="#fff" font-family="Arial" font-size="22" text-anchor="middle" font-weight="700">BLE Scanner</text>
+<text x="600" y="373" fill="#cbd5e1" font-family="Arial" font-size="16" text-anchor="middle">Nearby BLE devices</text>
+<text x="600" y="398" fill="#cbd5e1" font-family="Arial" font-size="16" text-anchor="middle">Name • MAC • RSSI</text>
+<text x="600" y="423" fill="#cbd5e1" font-family="Arial" font-size="16" text-anchor="middle">Duplicate filtering</text>
+
+<rect x="840" y="300" width="300" height="145" rx="18" fill="#111827" stroke="#00d9ff" stroke-width="2"/>
+<text x="990" y="340" fill="#fff" font-family="Arial" font-size="22" text-anchor="middle" font-weight="700">Channel Analyzer</text>
+<text x="990" y="373" fill="#cbd5e1" font-family="Arial" font-size="16" text-anchor="middle">Counts Wi-Fi networks</text>
+<text x="990" y="398" fill="#cbd5e1" font-family="Arial" font-size="16" text-anchor="middle">Channels 1–13</text>
+<text x="990" y="423" fill="#cbd5e1" font-family="Arial" font-size="16" text-anchor="middle">OLED bar display</text>
+
+<rect x="250" y="530" width="300" height="100" rx="18" fill="#111827" stroke="#00d9ff" stroke-width="2"/>
+<text x="400" y="568" fill="#fff" font-family="Arial" font-size="21" text-anchor="middle" font-weight="700">SH1106 OLED</text>
+<text x="400" y="600" fill="#cbd5e1" font-family="Arial" font-size="16" text-anchor="middle">I²C: SDA 21 • SCL 22</text>
+
+<rect x="650" y="530" width="300" height="100" rx="18" fill="#111827" stroke="#00d9ff" stroke-width="2"/>
+<text x="800" y="568" fill="#fff" font-family="Arial" font-size="21" text-anchor="middle" font-weight="700">3-Button Controls</text>
+<text x="800" y="600" fill="#cbd5e1" font-family="Arial" font-size="16" text-anchor="middle">UP 32 • DOWN 33 • SELECT 25</text>
+
+<g stroke="#00d9ff" stroke-width="3" fill="none">
+<path d="M500 225 L210 300"/>
+<path d="M600 225 L600 300"/>
+<path d="M700 225 L990 300"/>
+<path d="M520 445 L400 530"/>
+<path d="M680 445 L800 530"/>
+</g>
+<g fill="#00d9ff">
+<polygon points="210,300 225,286 220,306"/>
+<polygon points="600,300 590,285 610,285"/>
+<polygon points="990,300 975,286 980,306"/>
+<polygon points="400,530 390,515 410,520"/>
+<polygon points="800,530 790,520 810,515"/>
+</g>
+
+<text x="600" y="675" fill="#94a3b8" font-family="Arial" font-size="14" text-anchor="middle">Use only on wireless networks and devices you own or are authorized to assess.</text>
+</svg>
